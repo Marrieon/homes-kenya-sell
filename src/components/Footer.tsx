@@ -1,18 +1,43 @@
 import React, { useState } from 'react';
 import { Home, Phone, Mail, Facebook, Twitter, Instagram, Linkedin, Send, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useNewsletterSubscribers } from '@/hooks/useNewsletterSubscribers';
+import { useToast } from '@/hooks/use-toast';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
+  const { toast } = useToast();
+  const { loading, subscribe } = useNewsletterSubscribers();
   const [subscribed, setSubscribed] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 3000);
+    if (!email.trim()) return;
+
+    const { error } = await subscribe(email);
+    if (error) {
+      if (error.code === '23505') {
+        toast({
+          title: 'Already subscribed',
+          description: 'This email is already on our newsletter list.',
+        });
+      } else {
+        toast({
+          title: 'Subscription failed',
+          description: error.message || 'Please try again.',
+          variant: 'destructive',
+        });
+      }
+      return;
     }
+
+    setSubscribed(true);
+    setEmail('');
+    toast({
+      title: 'Subscribed successfully',
+      description: 'You will now receive listings and market insights.',
+    });
+    setTimeout(() => setSubscribed(false), 3000);
   };
 
   const propertyTypes = ['Houses', 'Apartments', 'Land', 'Bungalows', 'Commercial', 'Villas'];
@@ -50,9 +75,10 @@ const Footer: React.FC = () => {
               </div>
               <button
                 type="submit"
+                disabled={loading}
                 className="px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-colors flex items-center gap-2"
               >
-                {subscribed ? 'Subscribed!' : 'Subscribe'}
+                {loading ? 'Submitting...' : subscribed ? 'Subscribed!' : 'Subscribe'}
                 <Send className="w-4 h-4" />
               </button>
             </form>
